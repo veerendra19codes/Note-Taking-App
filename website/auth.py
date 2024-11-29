@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User
 from . import db
+from flask_login import login_user, login_required, current_user, logout_user
 
 auth = Blueprint("auth", __name__)
 
@@ -17,16 +18,20 @@ def login():
             # check is password is correct
             if check_password_hash(user.password, password):
                 # login successfull
+                flash("Logged in Successfully", category="success")
+                login_user(user, remember=True)
                 return redirect(url_for("views.home"))
             else:
                 flash("Password is incorrect", category="error")
         else:
             flash("User with this email does not exists!", category="error")
 
-    return render_template("login.html", text="hello")
+    return render_template("login.html", user=current_user)
 
 @auth.route("/logout")
+@login_required
 def logout():
+    logout_user()
     return "<h1>Logout</h1>"
 
 @auth.route("/signup",  methods=['GET', 'POST'])
@@ -61,11 +66,12 @@ def signup():
                 new_user = User(email=email, first_name=firstName, password=generate_password_hash(password1, method="sha256"))
                 db.session.add(new_user)
                 db.session.commit()
-                
+
+                login_user(user, remember=True)
                 flash("Account created", category="success")
 
                 return redirect(url_for("views.home"))
                 # same as return redirect("/") but it is better to use above one
 
 
-    return render_template("signup.html")
+    return render_template("signup.html", user=current_user)
